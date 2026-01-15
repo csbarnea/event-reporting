@@ -1,0 +1,40 @@
+Endpoints
+
+const API_BASE_URL = "http://localhost:5000"
+  const response = await fetch(`${API_BASE_URL}/api/incidents/${id}`)//GET
+  const response = await fetch(`${API_BASE_URL}/api/incidents`)//GET
+  const response = await fetch(`${API_BASE_URL}/api/incidents`,)//POST
+ 
+
+
+Use docker compose for database:
+docker compose up -d
+docker compose down
+
+Login to PgAdmin in browser:
+
+PgAdmin: http://localhost:5050
+Login:
+Email: admin@example.com
+Password: admin
+
+Name: incidents_db
+Host: db
+Port: 5432 
+Username: incidents_user
+Password: incidents_password
+
+
+in wsl
+python --version
+which python
+conda create -n backend-env python=3.10
+conda activate backend-env        
+
+
+To run backend:
+conda activate backend-env  
+python app.py
+Running on http://127.0.0.1:5000
+
+pip install firebase-admin
