@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Platform } from "react-native";
 import { useEventStore } from "../lib/store";
-import { Navbar } from "@/components/navbar";
-import { FiltersModal } from "@/components/filter-modal";
 
 export default function Home() {
     const { loadEvents } = useEventStore();
-    const [filtersOpen, setFiltersOpen] = useState(false);
 
     useEffect(() => {
-        loadEvents();
+        const interval = setInterval(() => {
+            loadEvents();
+        }, 3000);
+
+        return () => clearInterval(interval);
     }, [loadEvents]);
 
     let MapViewComponent: React.ReactNode = (
@@ -25,16 +26,7 @@ export default function Home() {
 
     return (
         <View style={{ flex: 1 }}>
-            <Navbar onOpenFilters={() => setFiltersOpen(true)} />
-
-            <View style={{ flex: 1, paddingBottom: 64 }}>
-                {MapViewComponent}
-            </View>
-
-            <FiltersModal
-                visible={filtersOpen}
-                onClose={() => setFiltersOpen(false)}
-            />
+            <View style={{ flex: 1 }}>{MapViewComponent}</View>
         </View>
     );
 }

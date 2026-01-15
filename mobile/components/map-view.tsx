@@ -5,6 +5,7 @@ import { useEventStore } from "../lib/store";
 import { EventDetailsDialog } from "./event-details-dialog";
 import { ReportEventDialog } from "./report-event-dialog";
 import type { Event } from "../lib/types";
+import { FiltersModal } from "./filter-modal";
 
 export function MapComponent() {
     const { filteredEvents } = useEventStore();
@@ -19,6 +20,7 @@ export function MapComponent() {
         longitude: number;
     } | null>(null);
     const mapRef = useRef<any>(null);
+    const [filtersOpen, setFiltersOpen] = useState(false);
 
     const MapView = require("react-native-maps").default;
     const { Marker, Callout, PROVIDER_GOOGLE } = require("react-native-maps");
@@ -74,7 +76,7 @@ export function MapComponent() {
                 initialRegion={romaniaRegion}
                 onPress={handleMapPress}
                 showsUserLocation={true}
-                showsMyLocationButton={true} 
+                showsMyLocationButton={true}
             >
                 {filteredEvents.map((event: Event) => (
                     <Marker
@@ -101,10 +103,15 @@ export function MapComponent() {
             </MapView>
 
             <View style={styles.counter}>
-                <Text style={styles.counterText}>
+                <Text style={styles.counterText} onPress={() => setFiltersOpen(true)}>
                     {filteredEvents.length} evenimente active
                 </Text>
             </View>
+
+            <FiltersModal
+                visible={filtersOpen}
+                onClose={() => setFiltersOpen(false)}
+            />
 
             <Pressable style={styles.userButton} onPress={focusOnUser}>
                 <Text style={{ color: "#000", fontSize: 20 }}>📍</Text>
@@ -157,6 +164,22 @@ const styles = StyleSheet.create({
         position: "absolute",
         bottom: 24,
         left: 16,
+        backgroundColor: "#fff",
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        justifyContent: "center",
+        alignItems: "center",
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 3 },
+        shadowOpacity: 0.2,
+        shadowRadius: 4,
+        elevation: 5,
+    },
+    filterButton: {
+        position: "absolute",
+        bottom: 24,
+        right: 16, // <-- move to right
         backgroundColor: "#fff",
         width: 48,
         height: 48,
