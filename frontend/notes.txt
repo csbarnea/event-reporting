@@ -1,0 +1,7 @@
+pnpm install/npm install
+
+To run:
+pnpm dev
+
+Acces it:
+http://localhost:3000/
