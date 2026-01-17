@@ -8,6 +8,10 @@ from flask_cors import CORS
 from config import Config
 from models import db, Incident, Admin
 
+from notifications import notify_admins_about_incident
+
+from firebase_client import upload_incident_photo
+
 
 def create_app() -> Flask:
     app = Flask(__name__)
@@ -79,59 +83,72 @@ def create_app() -> Flask:
 
     @app.route("/api/incidents", methods=["POST"])
     def create_incident():
-        """Raportare incident cu sau fără poză (JSON sau multipart/form-data)."""
-        
-        # if request.content_type and request.content_type.startswith("multipart/form-data"):
+        """
+        Raportare incident:
+            - JSON (application/json) fara poza
+            - multipart/form-data cu poza (field: photo)
+        """
 
-        #     form = request.form
+        def _create_and_persist_incident(data: dict, photo_url: str | None = None):
+            # Ataseaza photo_url daca exista
+            if photo_url is not None:
+                data["photo_url"] = photo_url
 
-        #     required_fields = ["lat", "lon", "alert_code", "description"]
-        #     missing = [f for f in required_fields if f not in form]
+            incident = Incident(**data)
+            db.session.add(incident)
+            db.session.commit()
 
-        #     if missing:
-        #         return jsonify({"error": f"Missing fields: {missing}"}), 400
+            # Notificari catre admini (mock)
+            try:
+                notify_admins_about_incident(incident)
+            except Exception as e:
+                # Nu blocam crearea incidentului daca notificarea esueaza
+                print(f"[NOTIFY] Failed: {e}")
 
-        #     lat = float(form.get("lat"))
-        #     lon = float(form.get("lon"))
-        #     alert_code = form.get("alert_code")
-        #     description = form.get("description")
-        #     tag = form.get("tag")
-        #     reporter_name = form.get("reporter_name")
-        #     reporter_email = form.get("reporter_email")
-        #     reporter_phone = form.get("reporter_phone")
+            return incident
 
-        #     # --- Upload foto dacă există ---
-        #     photo_url = None
-        #     if "photo" in request.files:
-        #         photo_file = request.files["photo"]
-        #         if photo_file.filename:
-        #             from datetime import datetime
-        #             ts = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
-        #             ext = photo_file.filename.rsplit(".", 1)[-1].lower()
-        #             filename = f"incidents/{ts}.{ext}"
+        # ------------------------------------------------------------
+        # 1) multipart/form-data (poate include poza)
+        # ------------------------------------------------------------
+        content_type = request.content_type or ""
+        if content_type.startswith("multipart/form-data"):
+            form = request.form
 
-        #             from firebase_client import upload_incident_photo
-        #             photo_url = upload_incident_photo(photo_file, filename)
+            # Construim payload in format compatibil cu validatorul existent
+            payload = {
+                "lat": form.get("lat"),
+                "lon": form.get("lon"),
+                "alert_code": form.get("alert_code"),
+                "description": form.get("description"),
+                "tag": form.get("tag"),
+                "reporter_name": form.get("reporter_name"),
+                "reporter_email": form.get("reporter_email"),
+                "reporter_phone": form.get("reporter_phone"),
+            }
 
-        #     incident = Incident(
-        #         lat=lat,
-        #         lon=lon,
-        #         alert_code=alert_code,
-        #         description=description,
-        #         tag=tag,
-        #         reporter_name=reporter_name,
-        #         reporter_email=reporter_email,
-        #         reporter_phone=reporter_phone,
-        #         photo_url=photo_url,
-        #     )
+            # Validare folosind functia existenta (ca la JSON)
+            data, errors = _validate_incident_payload(payload)
+            if errors:
+                return jsonify({"errors": errors}), 400
 
-        #     db.session.add(incident)
-        #     db.session.commit()
-        #     return jsonify(incident.to_dict()), 201
+            # Upload foto daca exista
+            photo_url = None
+            photo_file = request.files.get("photo")
+            if photo_file and getattr(photo_file, "filename", ""):
+                ts = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+                ext = photo_file.filename.rsplit(".", 1)[-1].lower() if "." in photo_file.filename else "jpg"
+                filename = f"incidents/{ts}.{ext}"
 
+                photo_url = upload_incident_photo(photo_file, filename)
 
+            incident = _create_and_persist_incident(data, photo_url=photo_url)
+            return jsonify(incident.to_dict()), 201
+
+        # ------------------------------------------------------------
+        # 2) JSON (application/json)
+        # ------------------------------------------------------------
         if not request.is_json:
-            return jsonify({"error": "Request body must be JSON"}), 400
+            return jsonify({"error": "Request must be JSON or multipart/form-data"}), 400
 
         payload = request.get_json(silent=True)
         if payload is None:
@@ -141,17 +158,9 @@ def create_app() -> Flask:
         if errors:
             return jsonify({"errors": errors}), 400
 
-        incident = Incident(**data)
-        db.session.add(incident)
-        db.session.commit()
-
-        # TODO: integrare SMS/email către administratori
-        # print(
-        #     f"[NOTIFY] Incident nou #{incident.id} ({incident.alert_code}) "
-        #     f"la {incident.reported_at.isoformat()}"
-        # )
-
+        incident = _create_and_persist_incident(data)
         return jsonify(incident.to_dict()), 201
+
 
     @app.route("/api/incidents", methods=["GET"])
     def list_incidents():

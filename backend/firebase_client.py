@@ -2,34 +2,43 @@ import os
 import firebase_admin
 from firebase_admin import credentials, storage
 
-FIREBASE_CREDENTIALS = os.environ.get(
-    "FIREBASE_CREDENTIALS",
-    "firebase-service-account.json", 
-)
+_bucket = None  # lazy init
 
-FIREBASE_STORAGE_BUCKET = os.environ.get(
-    "FIREBASE_STORAGE_BUCKET",
-    "flash-rock-427612-j3.firebasestorage.app",
-)
 
-# Inițializare Firebase 
-if not firebase_admin._apps:
-    cred = credentials.Certificate(FIREBASE_CREDENTIALS)
-    firebase_admin.initialize_app(cred, {
-        "storageBucket": FIREBASE_STORAGE_BUCKET,
-    })
+def _get_bucket():
+    global _bucket
 
-bucket = storage.bucket()
+    if _bucket is not None:
+        return _bucket
+
+    firebase_credentials = os.environ.get("FIREBASE_CREDENTIALS")
+    firebase_bucket = os.environ.get("FIREBASE_STORAGE_BUCKET")
+
+    if not firebase_credentials or not firebase_bucket:
+        raise RuntimeError(
+            "Firebase not configured. "
+            "Set FIREBASE_CREDENTIALS and FIREBASE_STORAGE_BUCKET."
+        )
+
+    if not firebase_admin._apps:
+        cred = credentials.Certificate(firebase_credentials)
+        firebase_admin.initialize_app(
+            cred,
+            {"storageBucket": firebase_bucket},
+        )
+
+    _bucket = storage.bucket()
+    return _bucket
 
 
 def upload_incident_photo(file_obj, filename: str) -> str:
     """
-    Urcă o poză în Firebase Storage.
-    file_obj = obiectul FileStorage din Flask (request.files["photo"])
-    filename = numele în bucket (ex: incidents/2025-...jpg)
-    Returnează URL-ul public.
+    Urca o poza in Firebase Storage si returneaza URL public.
     """
+    bucket = _get_bucket()
+
     blob = bucket.blob(filename)
     blob.upload_from_file(file_obj, content_type=file_obj.mimetype)
-    blob.make_public()  # pentru demo: link direct accesibil
+    blob.make_public()
+
     return blob.public_url
