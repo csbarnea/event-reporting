@@ -6,7 +6,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 from config import Config
-from models import db, Incident
+from models import db, Incident, Admin
 
 
 def create_app() -> Flask:
@@ -178,7 +178,45 @@ def create_app() -> Flask:
             return jsonify({"error": "Incident not found"}), 404
 
         return jsonify(incident.to_dict()), 200
-    
+	
+    # ---------- Admins API ----------
+
+    @app.route("/api/admins", methods=["GET"])
+    def get_admins():
+        admins = Admin.query.order_by(Admin.id.asc()).all()
+        return jsonify([a.to_dict() for a in admins]), 200
+
+
+    @app.route("/api/admins", methods=["POST"])
+    def create_admin():
+        data = request.get_json(silent=True) or {}
+
+        full_name = (data.get("full_name") or "").strip()
+        phone_ro = (data.get("phone_ro") or "").strip()
+        email = (data.get("email") or "").strip().lower()
+
+        if not full_name or not phone_ro or not email:
+            return jsonify(
+                {"error": "full_name, phone_ro and email are required"}
+            ), 400
+
+        existing = Admin.query.filter_by(email=email).first()
+        if existing:
+            return jsonify(
+                {"error": "admin with this email already exists"}
+            ), 409
+
+        admin = Admin(
+            full_name=full_name,
+            phone_ro=phone_ro,
+            email=email,
+        )
+
+        db.session.add(admin)
+        db.session.commit()
+
+        return jsonify(admin.to_dict()), 201
+
     return app
 
 

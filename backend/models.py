@@ -40,3 +40,25 @@ class Incident(db.Model):
 
     def __repr__(self):
         return f"<Incident id={self.id} alert_code={self.alert_code} tag={self.tag}>"
+
+class Admin(db.Model):
+    __tablename__ = "admins"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    full_name = db.Column(db.String(150), nullable=False)
+    phone_ro = db.Column(db.String(30), nullable=False)
+    email = db.Column(db.String(150), nullable=False, unique=True)
+
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "full_name": self.full_name,
+            "phone_ro": self.phone_ro,
+            "email": self.email,
+            "created_at": self.created_at.isoformat(),
+        }
+
+    def __repr__(self):
+        return f"<Admin id={self.id} email={self.email}>"
