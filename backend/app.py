@@ -368,6 +368,16 @@ def create_app() -> Flask:
 
         return jsonify(incident.to_dict()), 200
     
+    @app.route("/api/incidents/<int:incident_id>", methods=["DELETE"])
+    def delete_incident(incident_id):
+        incident = Incident.query.get(incident_id)
+        if incident is None:
+            return jsonify(False), 404
+
+        db.session.delete(incident)
+        db.session.commit()
+        return jsonify(True), 200
+    
     @app.route("/api/incidents/<int:incident_id>", methods=["PATCH"])
     def patch_incident(incident_id):
         """Actualizare partiala incident"""

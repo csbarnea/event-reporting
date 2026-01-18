@@ -12,6 +12,9 @@ Backend REST API pentru raportarea incidentelor, cu suport pentru:
 - PATCH /api/incidents/<id> 
   Actualizare partiala (tag/description etc.)
 
+- DELETE /api/incidents/<id>  
+  Sterge definitiv un incident din baza de date.
+
 - POST /api/incidents  
   Creeaza un incident (JSON sau multipart/form-data, cu poza optionala)
 
@@ -111,6 +114,16 @@ curl -X POST http://localhost:5000/api/incidents \
     "description": "Test incident JSON",
     "tag": "critical"
   }'
+
+### Stergere incident (DELETE)
+
+curl -X DELETE http://localhost:5000/api/incidents/7
+
+Response:
+true
+
+Nota: Operatia DELETE realizeaza o stergere fizica (hard delete).
+Incidentul este eliminat definitiv din baza de date si nu poate fi recuperat.
 
 ### Inserare incident cu poza (Firebase)
 
