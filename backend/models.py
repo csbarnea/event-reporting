@@ -49,6 +49,7 @@ class Admin(db.Model):
     phone_ro = db.Column(db.String(30), nullable=False)
     email = db.Column(db.String(150), nullable=False, unique=True)
 
+    password_hash = db.Column(db.String(255), nullable=True)
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     def to_dict(self):

@@ -13,6 +13,7 @@ services:
       - "5433:5432"   # expune Postgres pe localhost:5432
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./db_migrations:/migrations:ro
 
   pgadmin:
     image: dpage/pgadmin4

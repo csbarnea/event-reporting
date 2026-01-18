@@ -1,5 +1,9 @@
 # app.py
-from datetime import datetime
+import os
+import jwt
+from werkzeug.security import generate_password_hash, check_password_hash
+
+from datetime import datetime, timedelta
 from typing import Any, Dict
 
 from flask import Flask, jsonify, request
@@ -23,9 +27,56 @@ def create_app() -> Flask:
 
     db.init_app(app)
 
+    # ---------- Auth (JWT) ----------
+
+    def _jwt_secret() -> str:
+        return os.getenv("JWT_SECRET", "dev-jwt-secret-change-me")
+
+    def _jwt_ttl_minutes() -> int:
+        try:
+            return int(os.getenv("JWT_TTL_MIN", "60"))
+        except ValueError:
+            return 60
+
+    def _issue_admin_token(admin: Admin) -> str:
+        now = datetime.utcnow()
+        exp = now + timedelta(minutes=_jwt_ttl_minutes())
+        payload = {
+            "sub": str(admin.id),
+            "email": admin.email,
+            "iat": int(now.timestamp()),
+            "exp": int(exp.timestamp()),
+            "iss": "eventreport",
+        }
+        return jwt.encode(payload, _jwt_secret(), algorithm="HS256")
+
     @app.route("/health", methods=["GET"])
     def health():
         return jsonify({"status": "ok"}), 200
+    
+    @app.route("/api/auth/login", methods=["POST"])
+    def admin_login():
+        data = request.get_json(silent=True) or {}
+
+        email = (data.get("email") or "").strip().lower()
+        password = data.get("password") or ""
+
+        if not email or not password:
+            return jsonify({"error": "email and password are required"}), 400
+
+        admin = Admin.query.filter_by(email=email).first()
+        if not admin:
+            return jsonify({"error": "invalid credentials"}), 401
+
+        if not admin.password_hash:
+            # admin existent creat fara parola -> nu poate face login pana nu are parola setata
+            return jsonify({"error": "admin has no password set"}), 403
+
+        if not check_password_hash(admin.password_hash, password):
+            return jsonify({"error": "invalid credentials"}), 401
+
+        token = _issue_admin_token(admin)
+        return jsonify({"access_token": token, "token_type": "Bearer"}), 200
 
     # ---------- Helpers de validare -----------------
 
@@ -204,6 +255,7 @@ def create_app() -> Flask:
         full_name = (data.get("full_name") or "").strip()
         phone_ro = (data.get("phone_ro") or "").strip()
         email = (data.get("email") or "").strip().lower()
+        password = data.get("password")
 
         if not full_name or not phone_ro or not email:
             return jsonify(
@@ -220,6 +272,7 @@ def create_app() -> Flask:
             full_name=full_name,
             phone_ro=phone_ro,
             email=email,
+            password_hash=generate_password_hash(password) if password else None,
         )
 
         db.session.add(admin)

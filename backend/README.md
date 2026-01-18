@@ -26,6 +26,41 @@ Backend REST API pentru raportarea incidentelor, cu suport pentru:
 - GET /api/admins  
   Listeaza administratorii
 
+- POST /api/auth/login  
+  Autentificare administrator. Returneaza JWT access_token
+
+## Authentication (Admin)
+
+Autentificarea administratorilor se face folosind JWT (JSON Web Token).
+
+### Login admin
+POST /api/auth/login
+
+Body (application/json):
+{
+  "email": "admin@example.com",
+  "password": "StrongPass!2026"
+}
+
+Response:
+{
+  "access_token": "<JWT_TOKEN>"
+}
+
+Token-ul JWT trebuie trimis in header-ul Authorization pentru endpoint-urile
+protejate pentru administratori.
+Header:
+Authorization: Bearer <JWT_TOKEN>
+
+## Migratii baza de date
+
+Modificarile de schema sunt versionate in directorul:
+backend/db_migrations/
+La initializare, aceste scripturi trebuie aplicate manual sau automat
+in functie de mediul de rulare.
+Nota: tabelele initiale sunt create automat de backend (SQLAlchemy) la prima pornire.
+Migratiile de tip ALTER TABLE presupun ca tabela exista deja.
+
 
 ## Exemple
 
@@ -57,22 +92,22 @@ curl -X POST http://localhost:5000/api/incidents \
 
 
 ## Rulare locala
+
 1. Pornire baza de date (Docker)
 cd backend
 docker-compose up -d
 
-2. Pornire backend
-cd backend
+2. Pornire backend (prima rulare – creeaza tabelele initiale)
 python app.py
 
-3. Pornire frontend
+3. Aplicare migrari baza de date (obligatoriu la prima rulare)
+docker exec -i incidents_postgres psql -U incidents_user -d incidents_db < db_migrations/001_add_admin_password_hash.sql
+
+4. Repornieste backend (dupa migrare)
+python app.py
+
+5. Pornire frontend
 pnpm dev
-
-## Script util
-Inserare date demo in DB
-
-python add_incidents_db.py
-
 
 ## Firebase Storage – Upload imagini
 Upload-ul de imagini este optional si este realizat folosind
