@@ -3,7 +3,7 @@
 Backend REST API pentru raportarea incidentelor, cu suport pentru:
 - stocare in baza de date (PostgreSQL),
 - upload optional de imagini in Firebase Storage,
-- notificari automate (mock) catre administratori.
+- notificari automate catre administratori.
 
 ## API Endpoints
 
@@ -105,14 +105,46 @@ Fisierul firebase-service-account.json ofera acces complet la Firebase. Fiecare
 trebuie sa isi genereze propria cheie. Cheia nu se urca pe Git. Fisierul este exclus
 automat prin .gitignore .
 
+
 ## Notificari
-La crearea unui incident:
+La crearea unui incident, backend-ul notifica automat toti administratorii existenti
+in baza de date.
 
-	se trimit notificari mock catre toti administratorii
+### Comportament implicit
+Notificarile sunt simulate prin mesaje afisate in consola.
+Nu se trimit emailuri reale.
 
-	simulare email / SMS (output in consola)
+### Exemplu output in consola:
+[NOTIFY] Admin=admin.demo@example.com | ALERT=FIRE | TAG=critical | LOCATION=(44.4268, 26.1025)
 
-### Implementare:
+### Notificari reale prin email (SMTP - optional)
+Backend-ul suporta trimiterea de emailuri reale folosind SMTP (Gmail).
 
-backend/notifications.py
-Aceasta logica poate fi extinsa ulterior cu servicii reale (SendGrid, Twilio etc.).
+Pentru activare:
+ - se seteaza variabilele SMTP in fisierul backend/.env
+ - se activeaza flag-ul: NOTIFY_EMAIL_ENABLED=1
+
+La activare:
+ - se trimite un email catre fiecare administrator din baza de date
+ - trimiterea este best-effort (erorile SMTP nu blocheaza crearea incidentului)
+
+### Variabile SMTP utilizate
+Urmatoarele variabile de mediu sunt utilizate pentru trimiterea emailurilor:
+NOTIFY_EMAIL_ENABLED=1
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USE_TLS=1
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_app_password
+SMTP_FROM=EventReport your_email@gmail.com
+
+### Nota
+In demo exista un administrator cu email:admin.demo@example.com
+Aceasta adresa este fictiva, iar emailurile catre ea vor genera mesaje de tip bounce.
+Pentru testarea completa a notificarilor SMTP, este necesar fie adaugarea unui
+administrator cu o adresa de email reala, fie inlocuirea adresei de demo.
+
+### Implementare
+Logica de notificare este implementata in backend/notifications.py
+Aceasta poate fi extinsa ulterior cu servicii externe (SendGrid, Mailgun),
+SMS (Twilio), push notifications.

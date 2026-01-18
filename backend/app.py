@@ -12,7 +12,6 @@ from notifications import notify_admins_about_incident
 
 from firebase_client import upload_incident_photo
 
-
 def create_app() -> Flask:
     app = Flask(__name__)
     app.config.from_object(Config)
@@ -31,7 +30,7 @@ def create_app() -> Flask:
     # ---------- Helpers de validare -----------------
 
     def _validate_incident_payload(payload: Dict[str, Any]) -> tuple[Dict[str, Any], Dict[str, str] | None]:
-        """Validează minimal payload-ul de incident. Returnează (data_curată, errors sau None)."""
+        """Valideaza minimal payload-ul de incident. Returneaza (data_curata, errors sau None)."""
         errors: Dict[str, str] = {}
 
         required_fields = ["lat", "lon", "alert_code", "description"]
@@ -67,7 +66,7 @@ def create_app() -> Flask:
             errors["description"] = "description cannot be empty."
         data["description"] = description
 
-        # opționale
+        # optionale
         data["tag"] = payload.get("tag")
         data["photo_url"] = payload.get("photo_url")
         data["reporter_name"] = payload.get("reporter_name")
@@ -98,9 +97,11 @@ def create_app() -> Flask:
             db.session.add(incident)
             db.session.commit()
 
-            # Notificari catre admini (mock)
+            # Notificari catre admini
             try:
-                notify_admins_about_incident(incident)
+                admins = Admin.query.order_by(Admin.id.asc()).all()
+                admins_payload = [a.to_dict() for a in admins]
+                notify_admins_about_incident(admins_payload, incident.to_dict())
             except Exception as e:
                 # Nu blocam crearea incidentului daca notificarea esueaza
                 print(f"[NOTIFY] Failed: {e}")
@@ -180,14 +181,14 @@ def create_app() -> Flask:
     
     @app.route("/api/incidents/<int:incident_id>", methods=["GET"])
     def get_incident_by_id(incident_id):
-        """Returnează un incident după ID"""
+        """Returneaza un incident dupa ID"""
         incident = Incident.query.get(incident_id)
 
         if incident is None:
             return jsonify({"error": "Incident not found"}), 404
 
         return jsonify(incident.to_dict()), 200
-	
+
     # ---------- Admins API ----------
 
     @app.route("/api/admins", methods=["GET"])
