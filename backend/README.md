@@ -58,6 +58,7 @@ foloseste sau nu paginarea.
 - POST /api/auth/login  
   Autentificare administrator. Returneaza JWT access_token
 
+
 ## Authentication (Admin)
 
 Autentificarea administratorilor se face folosind JWT (JSON Web Token).
@@ -73,7 +74,8 @@ Body (application/json):
 
 Response:
 {
-  "access_token": "<JWT_TOKEN>"
+  "access_token": "<JWT_TOKEN>",
+  "token_type": "Bearer"
 }
 
 Token-ul JWT trebuie trimis in header-ul Authorization pentru endpoint-urile
@@ -81,14 +83,15 @@ protejate pentru administratori.
 Header:
 Authorization: Bearer <JWT_TOKEN>
 
-## Migratii baza de date
+
+## Migrari baza de date
 
 Modificarile de schema sunt versionate in directorul:
 backend/db_migrations/
 La initializare, aceste scripturi trebuie aplicate manual sau automat
 in functie de mediul de rulare.
 Nota: tabelele initiale sunt create automat de backend (SQLAlchemy) la prima pornire.
-Migratiile de tip ALTER TABLE presupun ca tabela exista deja.
+Migrarile de tip ALTER TABLE presupun ca tabela exista deja.
 
 
 ## Exemple
@@ -120,7 +123,21 @@ curl -X POST http://localhost:5000/api/incidents \
   -F "photo=@Images/fire.jpg"
 
 ### Actualizare partiala incident (PATCH)
+Endpoint-ul permite actualizarea partiala a unui incident existent,
+fara a modifica schema bazei de date.
 
+Campuri permise pentru actualizare:
+- tag
+- description
+- alert_code
+- photo_url
+- reporter_name
+- reporter_email
+- reporter_phone
+
+Campurile nepermise vor returna eroare 400.
+
+Exemplu:
 curl -X PATCH http://localhost:5000/api/incidents/4 \
   -H "Content-Type: application/json" \
   -d '{
@@ -169,7 +186,6 @@ RATE_LIMIT_POST_INCIDENTS=10 per minute
 ## Firebase Storage - Upload imagini
 Upload-ul de imagini este optional si este realizat folosind
 Firebase Admin SDK (server-side).
-
 
 ### Pasi de configurare Firebase
 1) Acceseaza Firebase Console
