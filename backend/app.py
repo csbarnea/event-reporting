@@ -5,8 +5,9 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 from datetime import datetime, timedelta
 from typing import Any, Dict
+from sqlalchemy import and_, or_
 
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, make_response
 from flask_cors import CORS
 
 from config import Config
@@ -216,20 +217,129 @@ def create_app() -> Flask:
 
     @app.route("/api/incidents", methods=["GET"])
     def list_incidents():
-        """Listare incidente"""
-        try:
-            limit = int(request.args.get("limit", 100))
-        except ValueError:
-            limit = 100
+        """Listare incidente (optional: paginare + filtrare non-breaking)"""
 
-        incidents = (
-            Incident.query
-            .order_by(Incident.reported_at.desc())
-            .limit(limit)
-            .all()
-        )
-        return jsonify([i.to_dict() for i in incidents]), 200
-    
+        # Base query
+        q = Incident.query
+
+        # -------------------------
+        # Optional filters
+        # -------------------------
+        tag = request.args.get("tag")
+        if tag:
+            q = q.filter(Incident.tag == tag)
+
+        alert_code = request.args.get("alert_code")
+        if alert_code:
+            q = q.filter(Incident.alert_code == alert_code)
+        
+        has_photo = request.args.get("has_photo")
+        if has_photo is not None:
+            v = has_photo.strip().lower()
+            truthy = v in ("1", "true", "yes", "y")
+            falsy = v in ("0", "false", "no", "n")
+
+            if truthy:
+                q = q.filter(
+                    and_(
+                        Incident.photo_url.isnot(None),
+                        Incident.photo_url != ""
+                    )
+                )
+            elif falsy:
+                q = q.filter(
+                    or_(
+                        Incident.photo_url.is_(None),
+                        Incident.photo_url == ""
+                    )
+                )
+
+        # Optional date filters (ISO): ?from=2026-01-01&to=2026-01-31
+        date_from = request.args.get("from")
+        if date_from:
+            try:
+                dt_from = datetime.fromisoformat(date_from)
+                q = q.filter(Incident.reported_at >= dt_from)
+            except ValueError:
+                return jsonify({"error": "Invalid 'from' date. Use ISO format (e.g. 2026-01-01 or 2026-01-01T12:00:00)."}), 400
+
+        date_to = request.args.get("to")
+        if date_to:
+            try:
+                dt_to = datetime.fromisoformat(date_to)
+                q = q.filter(Incident.reported_at <= dt_to)
+            except ValueError:
+                return jsonify({"error": "Invalid 'to' date. Use ISO format (e.g. 2026-01-31 or 2026-01-31T12:00:00)."}), 400
+
+        # Sort (default exactly like before)
+        q = q.order_by(Incident.reported_at.desc())
+
+        # -------------------------
+        # Pagination trigger rule
+        # -------------------------
+        has_pagination = any(k in request.args for k in ("page", "limit", "offset"))
+
+        # === OLD BEHAVIOR (no page/limit/offset) ===
+        if not has_pagination:
+            try:
+                limit = int(request.args.get("limit", 100))
+            except ValueError:
+                limit = 100
+
+            incidents = q.limit(limit).all()
+            return jsonify([i.to_dict() for i in incidents]), 200
+
+        # === PAGINATED BEHAVIOR (page/limit/offset present) ===
+        def _to_int(name: str, default: int):
+            raw = request.args.get(name, None)
+            if raw is None or str(raw).strip() == "":
+                return default
+            try:
+                return int(raw)
+            except ValueError:
+                raise ValueError(f"Invalid '{name}'. Must be integer.")
+
+        try:
+            limit = _to_int("limit", 20)
+            page = _to_int("page", 1)
+            raw_offset = request.args.get("offset", None)
+            offset = int(raw_offset) if raw_offset is not None and str(raw_offset).strip() != "" else None
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+
+        if limit <= 0:
+            return jsonify({"error": "Invalid 'limit'. Must be > 0."}), 400
+        if limit > 200:
+            limit = 200  # cap safety
+
+        if offset is None:
+            if page <= 0:
+                return jsonify({"error": "Invalid 'page'. Must be > 0."}), 400
+            offset = (page - 1) * limit
+        else:
+            if offset < 0:
+                return jsonify({"error": "Invalid 'offset'. Must be >= 0."}), 400
+            # page is informational when offset is provided
+            page = (offset // limit) + 1
+
+        total = q.order_by(None).count()
+        total_pages = (total + limit - 1) // limit if total > 0 else 0
+
+        incidents = q.offset(offset).limit(limit).all()
+
+        resp = make_response(jsonify([i.to_dict() for i in incidents]), 200)
+        resp.headers["X-Total-Count"] = str(total)
+        resp.headers["X-Page"] = str(page)
+        resp.headers["X-Limit"] = str(limit)
+        resp.headers["X-Total-Pages"] = str(total_pages)
+
+        # allow browser JS to read these headers (non-breaking)
+        expose = "X-Total-Count, X-Page, X-Limit, X-Total-Pages"
+        existing = resp.headers.get("Access-Control-Expose-Headers")
+        resp.headers["Access-Control-Expose-Headers"] = expose if not existing else f"{existing}, {expose}"
+
+        return resp
+
     @app.route("/api/incidents/<int:incident_id>", methods=["GET"])
     def get_incident_by_id(incident_id):
         """Returneaza un incident dupa ID"""

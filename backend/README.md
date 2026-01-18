@@ -1,4 +1,4 @@
-# Event Reporting Platform – Backend
+# Event Reporting Platform - Backend
 
 Backend REST API pentru raportarea incidentelor, cu suport pentru:
 - stocare in baza de date (PostgreSQL),
@@ -17,6 +17,31 @@ Backend REST API pentru raportarea incidentelor, cu suport pentru:
 
 - GET /api/incidents/<id>  
   Returneaza un incident dupa ID
+
+#### GET /api/incidents - Paginare si filtrare (optional)
+Endpoint-ul suporta paginare si filtrare optional.
+
+Comportament implicit: daca nu sunt furnizati parametri de paginare,
+endpoint-ul returneaza lista completa de incidente.
+
+Parametri optionali (query params):
+- page - numarul paginii (incepand de la 1)
+- limit - numar maxim de rezultate per pagina
+- offset - offset numeric (alternativ la page)
+- tag - filtrare dupa tag (ex:critical)
+- alert_code - filtrare dupa cod alerta (ex:FIRE)
+- has_photo - filtrare dupa existenta pozei (true/false)
+- from - data minima (ISO format)
+- to - data maxima (ISO format)
+
+Header-e de raspuns (doar cand se foloseste paginarea):
+- X-Total-Count - numar total de incidente
+- X-Page - pagina curenta
+- X-Limit - limita folosita
+- X-Total-Pages - numar total de pagini
+
+Body-ul raspunsului ramane o lista JSON de incidente, indiferent daca se
+foloseste sau nu paginarea.
 
 ### Admins
 
@@ -97,7 +122,7 @@ curl -X POST http://localhost:5000/api/incidents \
 cd backend
 docker-compose up -d
 
-2. Pornire backend (prima rulare – creeaza tabelele initiale)
+2. Pornire backend (prima rulare - creeaza tabelele initiale)
 python app.py
 
 3. Aplicare migrari baza de date (obligatoriu la prima rulare)
@@ -109,7 +134,7 @@ python app.py
 5. Pornire frontend
 pnpm dev
 
-## Firebase Storage – Upload imagini
+## Firebase Storage - Upload imagini
 Upload-ul de imagini este optional si este realizat folosind
 Firebase Admin SDK (server-side).
 
