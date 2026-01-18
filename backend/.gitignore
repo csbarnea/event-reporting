@@ -1,6 +1,9 @@
 # Firebase credentials
 firebase-service-account.json
 
+# Environment variables
+.env
+
 # Python virtual environments
 .venv/
 venv/
@@ -8,3 +11,6 @@ venv/
 # Python cache
 __pycache__/
 *.pyc
+
+# Local test images
+Images/
