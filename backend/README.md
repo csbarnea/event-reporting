@@ -9,6 +9,9 @@ Backend REST API pentru raportarea incidentelor, cu suport pentru:
 
 ### Incidents
 
+- PATCH /api/incidents/<id> 
+  Actualizare partiala (tag/description etc.)
+
 - POST /api/incidents  
   Creeaza un incident (JSON sau multipart/form-data, cu poza optionala)
 
@@ -22,7 +25,8 @@ Backend REST API pentru raportarea incidentelor, cu suport pentru:
 Endpoint-ul suporta paginare si filtrare optional.
 
 Comportament implicit: daca nu sunt furnizati parametri de paginare,
-endpoint-ul returneaza lista completa de incidente.
+endpoint-ul pastreaza comportamentul existent si returneaza maximum 100
+de incidente, ordonate descrescator dupa data raportarii.
 
 Parametri optionali (query params):
 - page - numarul paginii (incepand de la 1)
@@ -115,6 +119,15 @@ curl -X POST http://localhost:5000/api/incidents \
   -F "tag=critical" \
   -F "photo=@Images/fire.jpg"
 
+### Actualizare partiala incident (PATCH)
+
+curl -X PATCH http://localhost:5000/api/incidents/4 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "tag": "resolved",
+    "description": "Incident rezolvat"
+  }'
+
 
 ## Rulare locala
 
@@ -134,9 +147,29 @@ python app.py
 5. Pornire frontend
 pnpm dev
 
+
+## Rate limiting (optional)
+
+Rate limiting-ul este implementat pentru endpoint-ul:
+- POST /api/incidents
+
+Comportament implicit:
+- este dezactivat (RATE_LIMIT_ENABLED=0)
+
+Daca este activat:
+- POST /api/incidents este limitat conform variabilei:
+  RATE_LIMIT_POST_INCIDENTS (ex: "10 per minute")
+- la depasirea limitei, API-ul returneaza HTTP 429 Too Many Requests
+
+Configurare in .env:
+RATE_LIMIT_ENABLED=0|1
+RATE_LIMIT_POST_INCIDENTS=10 per minute
+
+
 ## Firebase Storage - Upload imagini
 Upload-ul de imagini este optional si este realizat folosind
 Firebase Admin SDK (server-side).
+
 
 ### Pasi de configurare Firebase
 1) Acceseaza Firebase Console

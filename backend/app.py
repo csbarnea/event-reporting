@@ -1,9 +1,10 @@
 # app.py
 import os
 import jwt
-from werkzeug.security import generate_password_hash, check_password_hash
 
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta
+
 from typing import Any, Dict
 from sqlalchemy import and_, or_
 
@@ -14,8 +15,10 @@ from config import Config
 from models import db, Incident, Admin
 
 from notifications import notify_admins_about_incident
-
 from firebase_client import upload_incident_photo
+
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 def create_app() -> Flask:
     app = Flask(__name__)
@@ -29,7 +32,6 @@ def create_app() -> Flask:
     db.init_app(app)
 
     # ---------- Auth (JWT) ----------
-
     def _jwt_secret() -> str:
         return os.getenv("JWT_SECRET", "dev-jwt-secret-change-me")
 
@@ -50,7 +52,22 @@ def create_app() -> Flask:
             "iss": "eventreport",
         }
         return jwt.encode(payload, _jwt_secret(), algorithm="HS256")
+    
+    # ---------- Rate limit (optional, disabled by default) ----------
+    RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "0") == "1"
+    try:
+        RATE_LIMIT_POST_INCIDENTS = os.getenv("RATE_LIMIT_POST_INCIDENTS", "10 per minute")
+    except Exception:
+        RATE_LIMIT_POST_INCIDENTS = "10 per minute"
 
+    limiter = Limiter(
+        get_remote_address,
+        app=app,
+        enabled=RATE_LIMIT_ENABLED,
+        storage_uri=os.getenv("RATE_LIMIT_STORAGE_URI", "memory://"),
+    )
+
+    @limiter.exempt
     @app.route("/health", methods=["GET"])
     def health():
         return jsonify({"status": "ok"}), 200
@@ -133,6 +150,7 @@ def create_app() -> Flask:
     # ---------- Endpoints ----------
 
     @app.route("/api/incidents", methods=["POST"])
+    @limiter.limit(RATE_LIMIT_POST_INCIDENTS)
     def create_incident():
         """
         Raportare incident:
@@ -348,6 +366,54 @@ def create_app() -> Flask:
         if incident is None:
             return jsonify({"error": "Incident not found"}), 404
 
+        return jsonify(incident.to_dict()), 200
+    
+    @app.route("/api/incidents/<int:incident_id>", methods=["PATCH"])
+    def patch_incident(incident_id):
+        """Actualizare partiala incident"""
+        incident = Incident.query.get(incident_id)
+        if incident is None:
+            return jsonify({"error": "Incident not found"}), 404
+
+        data = request.get_json(silent=True)
+        if data is None:
+            return jsonify({"error": "Invalid JSON payload"}), 400
+
+        allowed = {
+            "tag",
+            "description",
+            "alert_code",
+            "photo_url",
+            "reporter_name",
+            "reporter_email",
+            "reporter_phone",
+        }
+
+        unknown = [k for k in data.keys() if k not in allowed]
+        if unknown:
+            return jsonify({"error": f"Unknown field(s): {', '.join(unknown)}"}), 400
+
+        # Validari minimale (aliniate cu create)
+        if "alert_code" in data:
+            v = str(data.get("alert_code") or "").strip()
+            if not v:
+                return jsonify({"error": "alert_code cannot be empty."}), 400
+            if len(v) > 50:
+                return jsonify({"error": "alert_code is too long (max 50 chars)."}), 400
+            incident.alert_code = v
+
+        if "description" in data:
+            v = str(data.get("description") or "").strip()
+            if not v:
+                return jsonify({"error": "description cannot be empty."}), 400
+            incident.description = v
+
+        # restul: optional, pot deveni si None / ""
+        for field in ("tag", "photo_url", "reporter_name", "reporter_email", "reporter_phone"):
+            if field in data:
+                setattr(incident, field, data.get(field))
+
+        db.session.commit()
         return jsonify(incident.to_dict()), 200
 
     # ---------- Admins API ----------
