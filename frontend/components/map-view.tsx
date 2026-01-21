@@ -187,10 +187,9 @@ function EventInfoContent({
 
 function getAlertColor(alertCode: string): string {
   const colors: Record<string, string> = {
-    RED: "#ef4444",
-    ORANGE: "#f97316",
-    YELLOW: "#eab308",
-    GREEN: "#22c55e",
+    CRITICAL: "#ef4444",
+    WARNING: "#f97316",
+    INFO: "#22c55e",
   };
   return colors[alertCode] || "#6b7280";
 }

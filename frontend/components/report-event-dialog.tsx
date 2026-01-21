@@ -88,8 +88,9 @@ export function ReportEventDialog() {
         reporter_name: formData.reporter_name || undefined,
         reporter_email: formData.reporter_email || undefined,
         reporter_phone: formData.reporter_phone || undefined,
-        photo_url: null,
-      })
+      },
+      photoFile
+    )
 
       console.log("[v0] Incident created:", newIncident)
 
@@ -113,6 +114,7 @@ export function ReportEventDialog() {
         reporter_email: "",
         reporter_phone: "",
       })
+      setPhotoFile(null)   
       setPendingLocation(null)
       setOpen(false)
     } catch (error) {
@@ -199,6 +201,17 @@ export function ReportEventDialog() {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="photo">Poză (opțional)</Label>
+            <Input
+              id="photo"
+              type="file"
+              accept="image/*"
+              onChange={(e) => setPhotoFile(e.target.files?.[0] ?? null)}
+            />
+        </div>
+
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="latitude">Latitudine *</Label>
@@ -265,6 +278,7 @@ export function ReportEventDialog() {
               onClick={() => {
                 setOpen(false)
                 setPendingLocation(null)
+                setPhotoFile(null)
               }}
               className="flex-1"
               disabled={isSubmitting}

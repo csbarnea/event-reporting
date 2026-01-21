@@ -24,12 +24,17 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.config.from_object(Config)
 
+    # CORS(
+    #     app,
+    #     resources={"/api/*": {"origins": "*"}},
+    # )
+
     CORS(
         app,
-        resources={"/api/*": {"origins": "*"}},
+        resources={r"/*": {"origins": "*"}},
     )
 
-    db.init_app(app)
+    db.init_app(app) 
 
     # ---------- Auth (JWT) ----------
     def _jwt_secret() -> str:
@@ -150,7 +155,7 @@ def create_app() -> Flask:
     # ---------- Endpoints ----------
 
     @app.route("/api/incidents", methods=["POST"])
-    @limiter.limit(RATE_LIMIT_POST_INCIDENTS)
+    # @limiter.limit(RATE_LIMIT_POST_INCIDENTS)
     def create_incident():
         """
         Raportare incident:
@@ -210,7 +215,11 @@ def create_app() -> Flask:
                 ext = photo_file.filename.rsplit(".", 1)[-1].lower() if "." in photo_file.filename else "jpg"
                 filename = f"incidents/{ts}.{ext}"
 
-                photo_url = upload_incident_photo(photo_file, filename)
+                try:
+                    photo_url = upload_incident_photo(photo_file, filename)
+                except Exception as e:
+                    print(f"[FIREBASE] Upload failed: {e}")
+                    photo_url = None
 
             incident = _create_and_persist_incident(data, photo_url=photo_url)
             return jsonify(incident.to_dict()), 201
@@ -475,4 +484,5 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
 
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # app.run(host="0.0.0.0", port=5211, debug=True) 
+    app.run(host="0.0.0.0", port=5211, debug=True, use_reloader=False)
