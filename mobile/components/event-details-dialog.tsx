@@ -25,7 +25,7 @@ export function EventDetailsDialog({
             ORANGE: "Cod Portocaliu",
             YELLOW: "Cod Galben",
             GREEN: "Cod Verde",
-        }[code] || code);
+        })[code] || code;
 
     const getAlertColor = (code: string) =>
         ({
@@ -33,13 +33,17 @@ export function EventDetailsDialog({
             ORANGE: "#f97316",
             YELLOW: "#eab308",
             GREEN: "#22c55e",
-        }[code] || "#6b7280");
+        })[code] || "#6b7280";
 
     return (
         <Portal>
-            <Dialog visible={open} onDismiss={() => onOpenChange(false)}>
+            <Dialog
+                visible={open}
+                onDismiss={() => onOpenChange(false)}
+                style={{ maxHeight: "90%" }} // allows dialog to grow but not overflow
+            >
                 <Dialog.Content>
-                    <ScrollView style={styles.content}>
+                    <ScrollView contentContainerStyle={{ paddingBottom: 16 }}>
                         {/* Alert */}
                         <View style={styles.row}>
                             <View
@@ -47,7 +51,7 @@ export function EventDetailsDialog({
                                     styles.alertDot,
                                     {
                                         backgroundColor: getAlertColor(
-                                            event.alert_code
+                                            event.alert_code,
                                         ),
                                     },
                                 ]}
@@ -77,7 +81,7 @@ export function EventDetailsDialog({
                                         day: "numeric",
                                         hour: "2-digit",
                                         minute: "2-digit",
-                                    }
+                                    },
                                 )}
                             </Text>
                         </View>
@@ -128,31 +132,34 @@ export function EventDetailsDialog({
 
                         {/* Photo */}
                         {event.photo_url && (
-                            <Image
-                                source={{ uri: event.photo_url }}
-                                style={styles.photo}
-                                resizeMode="cover"
-                            />
+                            <View style={styles.photoWrapper}>
+                                <Image
+                                    source={{ uri: event.photo_url }}
+                                    style={styles.photo}
+                                />
+                            </View>
                         )}
 
                         {/* Small Map */}
-                        <MapView
-                            style={styles.map}
-                            provider={PROVIDER_GOOGLE}
-                            initialRegion={{
-                                latitude: event.lat,
-                                longitude: event.lon,
-                                latitudeDelta: 0.01,
-                                longitudeDelta: 0.01,
-                            }}
-                        >
-                            <Marker
-                                coordinate={{
+                        <View style={styles.mapWrapper}>
+                            <MapView
+                                style={styles.map}
+                                provider={PROVIDER_GOOGLE}
+                                initialRegion={{
                                     latitude: event.lat,
                                     longitude: event.lon,
+                                    latitudeDelta: 0.01,
+                                    longitudeDelta: 0.01,
                                 }}
-                            />
-                        </MapView>
+                            >
+                                <Marker
+                                    coordinate={{
+                                        latitude: event.lat,
+                                        longitude: event.lon,
+                                    }}
+                                />
+                            </MapView>
+                        </View>
                     </ScrollView>
                 </Dialog.Content>
             </Dialog>
@@ -161,11 +168,32 @@ export function EventDetailsDialog({
 }
 
 const styles = StyleSheet.create({
-    content: { padding: 12 },
     row: { flexDirection: "row", alignItems: "center", marginVertical: 4 },
     alertDot: { width: 12, height: 12, borderRadius: 6, marginRight: 6 },
     alertLabel: { fontWeight: "bold", fontSize: 16 },
     sectionTitle: { fontSize: 12, fontWeight: "600", marginTop: 8 },
-    photo: { width: "100%", height: 200, borderRadius: 8, marginTop: 8 },
-    map: { width: "100%", height: 200, marginTop: 8, borderRadius: 8 },
+
+    photoWrapper: {
+        width: "100%",
+        height: 200,
+        borderRadius: 8,
+        overflow: "hidden",
+        marginTop: 8,
+    },
+    photo: {
+        width: "100%",
+        height: "100%",
+        resizeMode: "cover",
+    },
+
+    mapWrapper: {
+        width: "100%",
+        height: 200,
+        borderRadius: 8,
+        overflow: "hidden",
+        marginTop: 8,
+    },
+    map: {
+        flex: 1,
+    },
 });

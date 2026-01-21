@@ -8,10 +8,12 @@ import {
     TouchableOpacity,
     StyleSheet,
     ActivityIndicator,
+    Button,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import { useEventStore } from "../lib/store";
 import { createIncident } from "../lib/api";
+import * as ImagePicker from "expo-image-picker";
 
 const SEVERITY_LEVELS = [
     { value: "CRITICAL", label: "Critic" },
@@ -40,6 +42,19 @@ export function ReportEventDialog({
 }: ReportEventDialogProps) {
     const { addEvent, loadEvents } = useEventStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [photoFile, setPhotoFile] =
+        useState<ImagePicker.ImagePickerAsset | null>(null);
+
+    const pickImage = async () => {
+        const result = await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            quality: 0.8,
+        });
+
+        if (!result.canceled) {
+            setPhotoFile(result.assets[0]);
+        }
+    };
 
     const [formData, setFormData] = useState({
         alert_code: "",
@@ -157,6 +172,28 @@ export function ReportEventDialog({
                     }
                 />
 
+                <Text style={styles.label}>Poză</Text>
+                <TouchableOpacity
+                    style={{
+                        borderWidth: 1,
+                        borderColor: "#ccc",
+                        borderRadius: 6,
+                        paddingVertical: 10,
+                        paddingHorizontal: 12,
+                        backgroundColor: "#fff",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginTop: 4,
+                    }}
+                    onPress={pickImage}
+                >
+                    <Text style={{ color: "#000" }}>
+                        {photoFile
+                            ? photoFile.fileName || "Poză selectată"
+                            : "Alege poză"}
+                    </Text>
+                </TouchableOpacity>
+
                 <Text style={styles.label}>Latitudine *</Text>
                 <TextInput
                     style={styles.input}
@@ -249,7 +286,7 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         marginTop: 16,
     },
-    button: { flex: 1, padding: 12, borderRadius: 6, alignItems: "center" },
+    button: { flex: 1, padding: 12, marginBottom: 30, borderRadius: 6, alignItems: "center" },
     cancelButton: { backgroundColor: "#eee", marginRight: 8 },
     submitButton: { backgroundColor: "#3b82f6" },
 });
