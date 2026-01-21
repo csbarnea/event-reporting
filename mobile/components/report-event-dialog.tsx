@@ -90,7 +90,7 @@ export function ReportEventDialog({
                 reporter_name: formData.reporter_name || undefined,
                 reporter_email: formData.reporter_email || undefined,
                 reporter_phone: formData.reporter_phone || undefined,
-                photo_url: null,
+                photoFile: photoFile || undefined,
             });
 
             addEvent(newIncident);
@@ -110,7 +110,7 @@ export function ReportEventDialog({
             onClose();
             alert("Eveniment raportat cu succes!");
         } catch (err) {
-            console.error(err);
+            console.error("Upload Error Details:", JSON.stringify(err, null, 2));
             alert("Eroare: nu s-a putut salva evenimentul.");
         } finally {
             setIsSubmitting(false);
@@ -286,7 +286,13 @@ const styles = StyleSheet.create({
         justifyContent: "space-between",
         marginTop: 16,
     },
-    button: { flex: 1, padding: 12, marginBottom: 30, borderRadius: 6, alignItems: "center" },
+    button: {
+        flex: 1,
+        padding: 12,
+        marginBottom: 30,
+        borderRadius: 6,
+        alignItems: "center",
+    },
     cancelButton: { backgroundColor: "#eee", marginRight: 8 },
     submitButton: { backgroundColor: "#3b82f6" },
 });

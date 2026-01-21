@@ -1,9 +1,10 @@
 import Constants from "expo-constants";
 import type { Event, CreateIncidentRequest } from "./types";
 import * as ImagePicker from "expo-image-picker";
+import { Platform } from "react-native";
 
 const API_BASE_URL =
-    Constants.expoConfig?.extra?.API_BASE_URL || "http://192.168.1.139:5211";
+    Constants.expoConfig?.extra?.API_BASE_URL || "SERVER_IP";
 
 export async function fetchIncidents(): Promise<Event[]> {
     const response = await fetch(`${API_BASE_URL}/api/incidents`);
@@ -22,12 +23,11 @@ export async function createIncident(
 ): Promise<Event> {
     const formData = new FormData();
 
-    // Append all standard fields
     formData.append("lat", String(data.lat));
     formData.append("lon", String(data.lon));
     formData.append("alert_code", data.alert_code);
     formData.append("description", data.description);
-    formData.append("tag", data.tag);
+    if (data.tag) formData.append("tag", data.tag);
     if (data.reporter_name)
         formData.append("reporter_name", data.reporter_name);
     if (data.reporter_email)
@@ -35,25 +35,33 @@ export async function createIncident(
     if (data.reporter_phone)
         formData.append("reporter_phone", data.reporter_phone);
 
-    // Append photo if exists
     if (data.photoFile) {
+        const uri = data.photoFile.uri;
+
+        // Extract filename from URI if fileName is missing
+        const fileName =
+            data.photoFile.fileName ?? uri.split("/").pop() ?? "photo.jpg";
+
+        // Infer type or default to image/jpeg
+        const type = data.photoFile.mimeType ?? "image/jpeg";
+
         formData.append("photo", {
-            uri: data.photoFile.uri,
-            name: data.photoFile.fileName || "photo.jpg",
-            type: data.photoFile.type || "image/jpeg",
+            uri: Platform.OS === "android" ? uri : uri.replace("file://", ""),
+            name: fileName,
+            type: type,
         } as any);
     }
 
     const response = await fetch(`${API_BASE_URL}/api/incidents`, {
         method: "POST",
         body: formData,
-        headers: {
-            "Content-Type": "multipart/form-data",
-        },
     });
 
     if (!response.ok) {
-        throw new Error("Failed to create incident");
+        const text = await response.text().catch(() => "");
+        throw new Error(
+            `Failed to create incident (${response.status}): ${text}`,
+        );
     }
 
     return response.json();
