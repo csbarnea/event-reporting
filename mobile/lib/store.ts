@@ -11,6 +11,7 @@ interface EventStore {
     error: string | null;
     setFilter: (key: keyof Filters, value: any) => void;
     clearFilters: () => void;
+    applyFilters: () => void;
     addEvent: (event: Event) => void;
     loadEvents: () => Promise<void>;
     setPendingLocation: (location: { lat: number; lon: number } | null) => void;
@@ -34,7 +35,9 @@ export const useEventStore = create<EventStore>((set, get) => ({
         set({ isLoading: true, error: null });
         try {
             const events = await fetchIncidents();
-            set({ events, filteredEvents: events, isLoading: false });
+            set({ events, isLoading: false });
+
+            get().applyFilters();
         } catch (error) {
             console.error("Failed to load events:", error);
             set({ error: "Failed to load events", isLoading: false });
@@ -46,7 +49,10 @@ export const useEventStore = create<EventStore>((set, get) => ({
     setFilter: (key, value) => {
         const newFilters = { ...get().filters, [key]: value };
         set({ filters: newFilters });
+    },
 
+    applyFilters: () => {
+        const newFilters = get().filters;
         let filtered = get().events;
 
         if (newFilters.dateFrom) {
@@ -55,7 +61,7 @@ export const useEventStore = create<EventStore>((set, get) => ({
                     ? newFilters.dateFrom
                     : new Date(newFilters.dateFrom).getTime();
             filtered = filtered.filter(
-                (e) => getEventTimeUtc(e.reported_at) >= fromMs
+                (e) => getEventTimeUtc(e.reported_at) >= fromMs,
             );
         }
 
@@ -65,13 +71,13 @@ export const useEventStore = create<EventStore>((set, get) => ({
                     ? newFilters.dateTo
                     : new Date(newFilters.dateTo).getTime();
             filtered = filtered.filter(
-                (e) => getEventTimeUtc(e.reported_at) <= toMs
+                (e) => getEventTimeUtc(e.reported_at) <= toMs,
             );
         }
 
         if (newFilters.alertCode && newFilters.alertCode !== "ALL") {
             filtered = filtered.filter(
-                (e) => e.alert_code === newFilters.alertCode
+                (e) => e.alert_code === newFilters.alertCode,
             );
         }
 
