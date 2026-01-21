@@ -62,7 +62,7 @@ export function MapComponent() {
                     latitudeDelta: 0.05,
                     longitudeDelta: 0.05,
                 },
-                500
+                500,
             );
         }
     };
@@ -85,9 +85,20 @@ export function MapComponent() {
                             latitude: event.lat,
                             longitude: event.lon,
                         }}
-                        pinColor={getAlertColor(event.alert_code)}
                         onPress={() => setSelectedEvent(event)}
                     >
+                        <View
+                            style={{
+                                width: 20,
+                                height: 20,
+                                borderRadius: 10,
+                                backgroundColor: getAlertColor(
+                                    event.alert_code,
+                                ),
+                                borderWidth: 2,
+                                borderColor: "#ffffff",
+                            }}
+                        />
                         <Callout>
                             <EventInfoContent
                                 event={event}
@@ -103,7 +114,10 @@ export function MapComponent() {
             </MapView>
 
             <View style={styles.counter}>
-                <Text style={styles.counterText} onPress={() => setFiltersOpen(true)}>
+                <Text
+                    style={styles.counterText}
+                    onPress={() => setFiltersOpen(true)}
+                >
                     {filteredEvents.length} evenimente active
                 </Text>
             </View>
@@ -196,10 +210,9 @@ const styles = StyleSheet.create({
 
 function getAlertColor(alertCode: string): string {
     const colors: Record<string, string> = {
-        RED: "#ef4444",
-        ORANGE: "#f97316",
-        YELLOW: "#eab308",
-        GREEN: "#22c55e",
+        CRITICAL: "#ef4444",
+        WARNING: "#f97316",
+        INFO: "#22c55e",
     };
     return colors[alertCode] || "#6b7280";
 }
