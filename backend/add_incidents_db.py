@@ -59,7 +59,7 @@ def add_incidents_db(n: int = 10):
 
             # raportate în ultimele 48h
             reported_at = now - timedelta(
-                hours=random.randint(0, 48),
+                hours=random.randint(0, 80),
                 minutes=random.randint(0, 59),
             )
 

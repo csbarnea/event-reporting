@@ -1,10 +1,10 @@
 import type { Event, CreateIncidentRequest } from "./types"
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5211"
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5221"
 
 export async function fetchIncidents(): Promise<Event[]> {
   const response = await fetch(`${API_BASE_URL}/api/incidents`)
-  if (!response.ok) {
+  if (!response.ok) { 
     throw new Error("Failed to fetch incidents")
   }
   return response.json()

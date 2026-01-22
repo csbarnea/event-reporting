@@ -13,11 +13,11 @@ class Incident(db.Model):
     lat = db.Column(db.Float, nullable=False)
     lon = db.Column(db.Float, nullable=False)
 
-    alert_code = db.Column(db.String(50), nullable=False)   # FLOOD, FIRE
+    alert_code = db.Column(db.String(50), nullable=False)   # CRITICAL, WARNING, INFO
     description = db.Column(db.Text, nullable=False)
 
     photo_url = db.Column(db.String(255), nullable=True)    # link poză
-    tag = db.Column(db.String(50), nullable=True)           # critical / warning / info
+    tag = db.Column(db.String(50), nullable=True)           # FLOOD, FIRE, ACCIDENT
 
     reporter_name = db.Column(db.String(100), nullable=True)
     reporter_email = db.Column(db.String(150), nullable=True)
